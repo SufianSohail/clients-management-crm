@@ -31,44 +31,44 @@ namespace CRM.API.Services
         }
 
         public async Task<Client> CreateAsync(CreateClientRequest request, string userId, SalesTeamType userTeam)
-{
-    var client = new Client
-    {
-        CompanyName = request.CompanyName,
-        ContactName = request.ContactName,
-        PhoneNumber = request.PhoneNumber,
-        Email = request.Email,
-        FeaturesGiven = request.FeaturesGiven ?? new List<string>(),
-        UpsellOpportunities = request.UpsellOpportunities ?? new List<string>(),
-        Urgency = Enum.Parse<UrgencyLevel>(request.Urgency, true),
-        ContractStartDate = request.ContractStartDate,
-        ContractEndDate = request.ContractEndDate,
-        AssignedSalesPersonId = request.AssignedSalesPersonId,
-        AssignedTeam = userTeam  // ✅ Important: always assign the team
-    };
+        {
+            var client = new Client
+            {
+                CompanyName = request.CompanyName,
+                ContactName = request.ContactName,
+                PhoneNumber = request.PhoneNumber,
+                Email = request.Email,
+                FeaturesGiven = request.FeaturesGiven ?? new List<string>(),
+                UpsellOpportunities = request.UpsellOpportunities ?? new List<string>(),
+                Urgency = Enum.Parse<UrgencyLevel>(request.Urgency, true),
+                ContractStartDate = request.ContractStartDate,
+                ContractEndDate = request.ContractEndDate,
+                AssignedSalesPersonId = request.AssignedSalesPersonId,
+                AssignedTeam = userTeam,
+                CreatedByUserId = userId
+            };
 
-    await _context.Clients.InsertOneAsync(client);
-    return client;
-}
-
+            await _context.Clients.InsertOneAsync(client);
+            return client;
+        }
 
         public async Task<List<Client>> GetAllClients()
         {
             var user = await GetLoggedInUser();
-
             return await _context.Clients
                 .Find(c => c.AssignedTeam == user.Team)
                 .ToListAsync();
         }
-        public async Task<List<Client>> GetAllAsync()
-{
-    return await _context.Clients.Find(_ => true).ToListAsync();
-}
 
-public async Task<Client?> GetByIdAsync(string id)
-{
-    return await _context.Clients.Find(c => c.Id == id).FirstOrDefaultAsync();
-}
+        public async Task<List<Client>> GetAllAsync()
+        {
+            return await _context.Clients.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<Client?> GetByIdAsync(string id)
+        {
+            return await _context.Clients.Find(c => c.Id == id).FirstOrDefaultAsync();
+        }
 
         public async Task UpdateClient(string id, CreateClientRequest request)
         {
@@ -84,12 +84,34 @@ public async Task<Client?> GetByIdAsync(string id)
                 .Set(x => x.ContractEndDate, request.ContractEndDate)
                 .Set(x => x.AssignedSalesPersonId, request.AssignedSalesPersonId);
 
+            if (!string.IsNullOrEmpty(request.AssignedTeamOverride) &&
+                Enum.TryParse<SalesTeamType>(request.AssignedTeamOverride, true, out var overrideTeam))
+            {
+                update = update.Set(x => x.AssignedTeam, overrideTeam);
+            }
+
             await _context.Clients.UpdateOneAsync(c => c.Id == id, update);
         }
 
         public async Task DeleteClient(string id)
         {
             await _context.Clients.DeleteOneAsync(c => c.Id == id);
+        }
+
+        public async Task<Document?> AddDocumentAsync(string clientId, Document document)
+        {
+            var filter = Builders<Client>.Filter.Eq(c => c.Id, clientId);
+            var update = Builders<Client>.Update.Push(c => c.Documents, document);
+            var result = await _context.Clients.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0 ? document : null;
+        }
+
+        public async Task<bool> RemoveDocumentAsync(string clientId, string docId)
+        {
+            var filter = Builders<Client>.Filter.Eq(c => c.Id, clientId);
+            var update = Builders<Client>.Update.PullFilter(c => c.Documents, d => d.Id == docId);
+            var result = await _context.Clients.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
         }
     }
 }

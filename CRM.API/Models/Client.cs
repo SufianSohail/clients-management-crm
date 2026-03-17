@@ -29,5 +29,7 @@ namespace CRM.API.Models
         public string CreatedByUserId { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public List<Document> Documents { get; set; } = new();
     }
 }

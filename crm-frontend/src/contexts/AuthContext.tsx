@@ -1,7 +1,9 @@
 import React from 'react';
 import axios from 'axios';
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
+
+const API_BASE = 'https://localhost:7047';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -27,39 +29,86 @@ interface LoginResponse {
   };
 }
 
+function parseJwt(token: string): any {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
+function restoreUserFromToken(token: string): User | null {
+  const payload = parseJwt(token);
+  if (!payload) return null;
+
+  // Check expiry
+  const now = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < now) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentUser');
+    return null;
+  }
+
+  const stored = localStorage.getItem('currentUser');
+  if (stored) {
+    try {
+      return JSON.parse(stored) as User;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const token = localStorage.getItem('token');
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (token) return restoreUserFromToken(token);
+    return null;
+  });
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    const response = await axios.post<LoginResponse>(
-      'https://localhost:7047/api/auth/login',
-      { email, password }
-    );
+    try {
+      const response = await axios.post<LoginResponse>(
+        `${API_BASE}/api/auth/login`,
+        { email, password }
+      );
 
-    const apiUser = response.data.user;
+      const apiUser = response.data.user;
 
-    if (apiUser) {
-      const mappedUser: User = {
-        id: apiUser.id,
-        name: apiUser.fullName,
-        email: apiUser.email,
-        role: apiUser.role.toLowerCase() === 'admin' ? 'sales' : 'support',
-        team: apiUser.team as any,
-      };
+      if (apiUser) {
+        const mappedUser: User = {
+          id: apiUser.id,
+          name: apiUser.fullName,
+          email: apiUser.email,
+          role: apiUser.role.toLowerCase() === 'admin' ? 'sales' : 'support',
+          team: apiUser.team as any,
+        };
 
-      setCurrentUser(mappedUser);
-      localStorage.setItem('token', response.data.token);
-      console.log(`✅ User ${mappedUser.name} logged in successfully`);
-      return true;
+        setCurrentUser(mappedUser);
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('currentUser', JSON.stringify(mappedUser));
+        return true;
+      }
+
+      return false;
+    } catch {
+      return false;
     }
-
-    return false;
   };
 
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem('token');
-    console.log('👋 User logged out');
+    localStorage.removeItem('currentUser');
   };
 
   return (

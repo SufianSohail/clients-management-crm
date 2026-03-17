@@ -1,10 +1,20 @@
-import React from "react"; // Add this at the top
-
+import React from "react";
 import { useState, useEffect, useRef } from 'react';
 import { Client, User, UrgencyLevel } from '../types';
-import { X, Plus } from 'lucide-react';
-import { mockUsers } from '../data/mockData';
+import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+
+const API_BASE = 'https://localhost:7047';
+
+interface ApiUser {
+  id: string;
+  fullName: string;
+  email: string;
+  team: string;
+  role: string;
+  isActive: boolean;
+}
 
 interface ClientModalProps {
   client: Client | null;
@@ -21,7 +31,7 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
     featuresGiven: [] as string[],
     upsellOpportunities: [] as string[],
     urgency: 'short-term' as UrgencyLevel,
-    assignedSalesPerson: null as User | null,
+    assignedSalesPersonId: '',
     contractStartDate: '',
     contractEndDate: '',
   });
@@ -29,11 +39,25 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
   const [featureInput, setFeatureInput] = useState('');
   const [upsellInput, setUpsellInput] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [apiUsers, setApiUsers] = useState<ApiUser[]>([]);
   const featureInputRef = useRef<HTMLInputElement>(null);
-
-  // Get current user from auth context
   const { currentUser } = useAuth();
-  const salesUsers = mockUsers.filter(u => u.role === 'sales');
+
+  // Load users from API
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get<ApiUser[]>(`${API_BASE}/api/users`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        setApiUsers(response.data.filter(u => u.isActive && u.team === 'Sales'));
+      } catch (err) {
+        console.error('Failed to load users:', err);
+      }
+    };
+    loadUsers();
+  }, []);
 
   useEffect(() => {
     if (client) {
@@ -45,126 +69,121 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
         featuresGiven: client.featuresGiven,
         upsellOpportunities: client.upsellOpportunities,
         urgency: client.urgency,
-        assignedSalesPerson: client.assignedSalesPerson,
-        contractStartDate: client.contractStartDate,
-        contractEndDate: client.contractEndDate,
+        assignedSalesPersonId: client.assignedSalesPerson?.id || '',
+        contractStartDate: client.contractStartDate
+          ? new Date(client.contractStartDate).toISOString().split('T')[0]
+          : '',
+        contractEndDate: client.contractEndDate
+          ? new Date(client.contractEndDate).toISOString().split('T')[0]
+          : '',
       });
     } else {
-      // Auto-assign to current user for new clients if they are sales
-      const defaultSales = currentUser?.role === 'sales' ? currentUser : salesUsers[0];
-      setFormData(prev => ({ ...prev, assignedSalesPerson: defaultSales }));
+      setFormData(prev => ({ ...prev, assignedSalesPersonId: currentUser?.id || '' }));
     }
   }, [client, currentUser]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.companyName.trim()) {
-      newErrors.companyName = 'Company name is required';
-    }
-    if (!formData.contactName.trim()) {
-      newErrors.contactName = 'Contact name is required';
-    }
+    if (!formData.companyName.trim()) newErrors.companyName = 'Company name is required';
+    if (!formData.contactName.trim()) newErrors.contactName = 'Contact name is required';
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
     }
-    if (!formData.assignedSalesPerson) {
-      newErrors.assignedSalesPerson = 'Sales person assignment is required';
+    if (!formData.assignedSalesPersonId) {
+      newErrors.assignedSalesPersonId = 'Sales person assignment is required';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validate()) return;
+
+    // Map back to selected user
+    const selectedUser = apiUsers.find(u => u.id === formData.assignedSalesPersonId);
+    const assignedSalesPerson: User | null = selectedUser
+      ? {
+        id: selectedUser.id,
+        name: selectedUser.fullName,
+        email: selectedUser.email,
+        role: 'support',
+        team: selectedUser.team as any,
+      }
+      : null;
+
+    const urgencyReverseMap: Record<UrgencyLevel, string> = {
+      immediate: 'High',
+      'short-term': 'Medium',
+      'long-term': 'Low',
+    };
 
     const savedClient: Client = client
       ? {
-          ...client,
-          ...formData,
-          updatedDate: new Date().toISOString(),
-        }
+        ...client,
+        companyName: formData.companyName,
+        contactName: formData.contactName,
+        email: formData.email,
+        phone: formData.phone,
+        featuresGiven: formData.featuresGiven,
+        upsellOpportunities: formData.upsellOpportunities,
+        urgency: formData.urgency,
+        assignedSalesPerson,
+        contractStartDate: formData.contractStartDate,
+        contractEndDate: formData.contractEndDate,
+        updatedDate: new Date().toISOString(),
+      }
       : {
-          id: Date.now().toString(),
-          ...formData,
-          salesTeam: currentUser!.team,
-          documents: [],
-          comments: [],
-          createdBy: currentUser!,
-          createdDate: new Date().toISOString(),
-          updatedDate: new Date().toISOString(),
-          assignedSalesPerson: formData.assignedSalesPerson!,
-        };
+        id: Date.now().toString(),
+        companyName: formData.companyName,
+        contactName: formData.contactName,
+        email: formData.email,
+        phone: formData.phone,
+        featuresGiven: formData.featuresGiven,
+        upsellOpportunities: formData.upsellOpportunities,
+        urgency: formData.urgency,
+        assignedSalesPerson,
+        contractStartDate: formData.contractStartDate,
+        contractEndDate: formData.contractEndDate,
+        salesTeam: currentUser!.team,
+        documents: [],
+        comments: [],
+        createdBy: currentUser!,
+        createdDate: new Date().toISOString(),
+        updatedDate: new Date().toISOString(),
+      };
 
     onSave(savedClient);
-
-    // Mock email notification for new assignment
-    if (formData.assignedSalesPerson && (!client || client.assignedSalesPerson?.id !== formData.assignedSalesPerson.id)) {
-      console.log(`📧 Email sent to ${formData.assignedSalesPerson.email}: You've been assigned to ${formData.companyName}`);
-    }
   };
 
   const handleAddFeature = () => {
     if (featureInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        featuresGiven: [...prev.featuresGiven, featureInput.trim()],
-      }));
+      setFormData(prev => ({ ...prev, featuresGiven: [...prev.featuresGiven, featureInput.trim()] }));
       setFeatureInput('');
     }
   };
 
   const handleAddUpsell = () => {
     if (upsellInput.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        upsellOpportunities: [...prev.upsellOpportunities, upsellInput.trim()],
-      }));
+      setFormData(prev => ({ ...prev, upsellOpportunities: [...prev.upsellOpportunities, upsellInput.trim()] }));
       setUpsellInput('');
     }
   };
 
-  const handleUpsellKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddUpsell();
-    } else if (e.key === 'Backspace' && upsellInput === '' && formData.upsellOpportunities.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        upsellOpportunities: prev.upsellOpportunities.slice(0, -1),
-      }));
-    }
-  };
-
-  const handleRemoveUpsell = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      upsellOpportunities: prev.upsellOpportunities.filter((_, i) => i !== index),
-    }));
-  };
-
   const handleFeatureKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddFeature();
-    } else if (e.key === 'Backspace' && featureInput === '' && formData.featuresGiven.length > 0) {
-      setFormData(prev => ({
-        ...prev,
-        featuresGiven: prev.featuresGiven.slice(0, -1),
-      }));
+    if (e.key === 'Enter') { e.preventDefault(); handleAddFeature(); }
+    else if (e.key === 'Backspace' && featureInput === '' && formData.featuresGiven.length > 0) {
+      setFormData(prev => ({ ...prev, featuresGiven: prev.featuresGiven.slice(0, -1) }));
     }
   };
 
-  const handleRemoveFeature = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      featuresGiven: prev.featuresGiven.filter((_, i) => i !== index),
-    }));
+  const handleUpsellKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleAddUpsell(); }
+    else if (e.key === 'Backspace' && upsellInput === '' && formData.upsellOpportunities.length > 0) {
+      setFormData(prev => ({ ...prev, upsellOpportunities: prev.upsellOpportunities.slice(0, -1) }));
+    }
   };
 
   return (
@@ -174,15 +193,13 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
           <h2 className="text-xl font-semibold text-gray-900">
             {client ? 'Edit Client' : 'Add New Client'}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="w-5 h-5 text-gray-500" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-6">
+          {/* Company & Contact Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -192,15 +209,10 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                 type="text"
                 value={formData.companyName}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.companyName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.companyName ? 'border-red-500' : 'border-gray-300'}`}
               />
-              {errors.companyName && (
-                <p className="mt-1 text-sm text-red-500">{errors.companyName}</p>
-              )}
+              {errors.companyName && <p className="mt-1 text-sm text-red-500">{errors.companyName}</p>}
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Name <span className="text-red-500">*</span>
@@ -209,16 +221,13 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                 type="text"
                 value={formData.contactName}
                 onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.contactName ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.contactName ? 'border-red-500' : 'border-gray-300'}`}
               />
-              {errors.contactName && (
-                <p className="mt-1 text-sm text-red-500">{errors.contactName}</p>
-              )}
+              {errors.contactName && <p className="mt-1 text-sm text-red-500">{errors.contactName}</p>}
             </div>
           </div>
 
+          {/* Email & Phone */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -228,19 +237,12 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-              )}
+              {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
               <input
                 type="tel"
                 value={formData.phone}
@@ -250,23 +252,15 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
             </div>
           </div>
 
+          {/* Features Given */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Features Given
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Features Given</label>
             <div className="border border-gray-300 rounded-lg p-3 min-h-[80px]">
               <div className="flex flex-wrap gap-2 items-center">
                 {formData.featuresGiven.map((feature, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-sm border border-blue-200"
-                  >
+                  <span key={index} className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-sm border border-blue-200">
                     {feature}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFeature(index)}
-                      className="hover:text-blue-900"
-                    >
+                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, featuresGiven: prev.featuresGiven.filter((_, i) => i !== index) }))} className="hover:text-blue-900">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -283,28 +277,18 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                 />
               </div>
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Type a feature name and press Enter to add. Press Backspace to remove last feature.
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Type a feature name and press Enter to add.</p>
           </div>
 
+          {/* Upsell / Cross-Sell */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Upsell / Cross-Sell Opportunities
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Upsell / Cross-Sell Opportunities</label>
             <div className="border border-gray-300 rounded-lg p-3 min-h-[80px]">
               <div className="flex flex-wrap gap-2 items-center">
                 {formData.upsellOpportunities.map((upsell, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-sm border border-green-200"
-                  >
+                  <span key={index} className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1 bg-green-50 text-green-800 rounded-full text-sm font-medium border border-green-300">
                     {upsell}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveUpsell(index)}
-                      className="hover:text-green-900"
-                    >
+                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, upsellOpportunities: prev.upsellOpportunities.filter((_, i) => i !== index) }))} className="hover:text-green-900">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -315,21 +299,18 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                   onChange={(e) => setUpsellInput(e.target.value)}
                   onKeyDown={handleUpsellKeyDown}
                   onBlur={handleAddUpsell}
-                  placeholder="Type upsell and press Enter..."
+                  placeholder="Type upsell opportunity and press Enter..."
                   className="flex-1 min-w-[200px] px-2 py-1 text-sm border-none focus:outline-none focus:ring-0"
                 />
               </div>
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Type an upsell or cross-sell opportunity and press Enter to add. Press Backspace to remove last tag.
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Type an opportunity and press Enter to add.</p>
           </div>
 
+          {/* Urgency + Contract Dates */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Urgency
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Urgency</label>
               <select
                 value={formData.urgency}
                 onChange={(e) => setFormData({ ...formData, urgency: e.target.value as UrgencyLevel })}
@@ -340,11 +321,8 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                 <option value="long-term">Long Term (over 4 weeks)</option>
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contract Start
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contract Start</label>
               <input
                 type="date"
                 value={formData.contractStartDate}
@@ -352,11 +330,8 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contract End
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contract End</label>
               <input
                 type="date"
                 value={formData.contractEndDate}
@@ -366,29 +341,25 @@ export function ClientModal({ client, onClose, onSave }: ClientModalProps) {
             </div>
           </div>
 
+          {/* Assigned Sales Person */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Assign Sales Person <span className="text-red-500">*</span>
             </label>
             <select
-              value={formData.assignedSalesPerson?.id || ''}
-              onChange={(e) => setFormData({
-                ...formData,
-                assignedSalesPerson: salesUsers.find(u => u.id === e.target.value) || null,
-              })}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.assignedSalesPerson ? 'border-red-500' : 'border-gray-300'
-              }`}
+              value={formData.assignedSalesPersonId}
+              onChange={(e) => setFormData({ ...formData, assignedSalesPersonId: e.target.value })}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.assignedSalesPersonId ? 'border-red-500' : 'border-gray-300'}`}
             >
               <option value="">Select sales person...</option>
-              {salesUsers.map(user => (
+              {apiUsers.map(user => (
                 <option key={user.id} value={user.id}>
-                  {user.name} ({user.team})
+                  {user.fullName} ({user.team})
                 </option>
               ))}
             </select>
-            {errors.assignedSalesPerson && (
-              <p className="mt-1 text-sm text-red-500">{errors.assignedSalesPerson}</p>
+            {errors.assignedSalesPersonId && (
+              <p className="mt-1 text-sm text-red-500">{errors.assignedSalesPersonId}</p>
             )}
           </div>
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace CRM.API.DTOs
 {
@@ -10,10 +11,12 @@ namespace CRM.API.DTOs
         [Required]
         public string ContactName { get; set; } = string.Empty;
 
-        [Required]
+        [RegularExpression(@"^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,8}$|^0[0-9]{9,14}$",
+            ErrorMessage = "Invalid phone number format. Use formats like 03001234567, +923001234567, or (555) 123-4567.")]
         public string PhoneNumber { get; set; } = string.Empty;
 
         [Required]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
         public string Email { get; set; } = string.Empty;
 
         public List<string> FeaturesGiven { get; set; } = new();
@@ -25,7 +28,9 @@ namespace CRM.API.DTOs
         public DateTime ContractStartDate { get; set; }
         public DateTime ContractEndDate { get; set; }
 
-        [Required]
         public string AssignedSalesPersonId { get; set; } = string.Empty;
+
+        /// <summary>If provided, overrides the team on update (admin override).</summary>
+        public string? AssignedTeamOverride { get; set; }
     }
 }

@@ -1,7 +1,9 @@
-import React from 'react';
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Client } from '../types';
 import { Plus, X } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE = 'https://localhost:7047';
 
 interface FeaturesCellProps {
   client: Client;
@@ -11,16 +13,51 @@ interface FeaturesCellProps {
 export function FeaturesCell({ client, onUpdate }: FeaturesCellProps) {
   const [inputValue, setInputValue] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const persistUpdate = async (updatedClient: Client) => {
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const urgencyReverseMap: Record<string, string> = {
+        immediate: 'High',
+        'short-term': 'Medium',
+        'long-term': 'Low',
+      };
+      await axios.put(
+        `${API_BASE}/api/client/${updatedClient.id}`,
+        {
+          companyName: updatedClient.companyName,
+          contactName: updatedClient.contactName,
+          phoneNumber: updatedClient.phone,
+          email: updatedClient.email,
+          featuresGiven: updatedClient.featuresGiven,
+          upsellOpportunities: updatedClient.upsellOpportunities,
+          urgency: urgencyReverseMap[updatedClient.urgency] ?? 'Medium',
+          contractStartDate: updatedClient.contractStartDate || new Date().toISOString(),
+          contractEndDate: updatedClient.contractEndDate || new Date().toISOString(),
+          assignedSalesPersonId: updatedClient.assignedSalesPerson?.id ?? '',
+        },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+      );
+      onUpdate(updatedClient);
+    } catch {
+      // parent retains old state on error
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleAddFeature = () => {
     if (inputValue.trim()) {
-      onUpdate({
+      const updated: Client = {
         ...client,
         featuresGiven: [...client.featuresGiven, inputValue.trim()],
         updatedDate: new Date().toISOString(),
-      });
+      };
       setInputValue('');
+      persistUpdate(updated);
     }
   };
 
@@ -29,12 +66,12 @@ export function FeaturesCell({ client, onUpdate }: FeaturesCellProps) {
       e.preventDefault();
       handleAddFeature();
     } else if (e.key === 'Backspace' && inputValue === '' && client.featuresGiven.length > 0) {
-      // Remove last feature on backspace if input is empty
-      onUpdate({
+      const updated: Client = {
         ...client,
         featuresGiven: client.featuresGiven.slice(0, -1),
         updatedDate: new Date().toISOString(),
-      });
+      };
+      persistUpdate(updated);
     } else if (e.key === 'Escape') {
       setIsAdding(false);
       setInputValue('');
@@ -42,30 +79,32 @@ export function FeaturesCell({ client, onUpdate }: FeaturesCellProps) {
   };
 
   const handleRemoveFeature = (index: number) => {
-    onUpdate({
+    const updated: Client = {
       ...client,
       featuresGiven: client.featuresGiven.filter((_, i) => i !== index),
       updatedDate: new Date().toISOString(),
-    });
+    };
+    persistUpdate(updated);
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5 items-center">
+    <div className={`flex flex-wrap gap-1.5 items-center ${isSaving ? 'opacity-70' : ''}`}>
       {client.featuresGiven.map((feature, index) => (
         <span
           key={index}
-          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200 group"
+          className="inline-flex items-center justify-center text-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs border border-blue-200 group"
         >
           {feature}
           <button
             onClick={() => handleRemoveFeature(index)}
             className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-900"
+            title="Remove"
           >
             <X className="w-3 h-3" />
           </button>
         </span>
       ))}
-      
+
       {isAdding ? (
         <input
           ref={inputRef}

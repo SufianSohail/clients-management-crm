@@ -5,30 +5,44 @@ interface UrgencyBadgeProps {
   urgency: UrgencyLevel;
 }
 
-const urgencyConfig = {
+// Using inline styles to guarantee colors are never purged by Tailwind
+const urgencyConfig: Record<UrgencyLevel, { label: string; description: string; bg: string; text: string; border: string }> = {
   'immediate': {
     label: 'Immediate',
     description: '1-2 days',
-    className: 'bg-red-100 text-red-800 border-red-200',
+    bg: '#fee2e2',
+    text: '#991b1b',
+    border: '#fecaca',
   },
   'short-term': {
     label: 'Short Term',
     description: 'Within 4 weeks',
-    className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    bg: '#e0e7ff',
+    text: '#3730a3',
+    border: '#c7d2fe',
   },
   'long-term': {
     label: 'Long Term',
     description: 'Over 4 weeks',
-    className: 'bg-green-100 text-green-800 border-green-200',
+    bg: '#d1fae5',
+    text: '#065f46',
+    border: '#a7f3d0',
   },
 };
 
 export function UrgencyBadge({ urgency }: UrgencyBadgeProps) {
-  const config = urgencyConfig[urgency];
-  
+  const config = urgencyConfig[urgency] ?? urgencyConfig['short-term'];
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.className}`}
+      style={{
+        backgroundColor: config.bg,
+        color: config.text,
+        borderColor: config.border,
+        borderWidth: 1,
+        borderStyle: 'solid',
+      }}
+      className="inline-flex items-center justify-center text-center px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
       title={config.description}
     >
       {config.label}

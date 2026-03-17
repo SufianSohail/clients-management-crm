@@ -17,6 +17,7 @@ builder.Services.AddScoped<UpsellService>();
 builder.Services.AddScoped<CommentService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ClientService>();
+builder.Services.AddTransient<IEmailService, EmailService>();
 
 
 builder.Services.Configure<FormOptions>(options =>
@@ -55,7 +56,11 @@ builder.Services.AddHttpsRedirection(options =>
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -89,10 +94,12 @@ await DatabaseSeeder.SeedAll(clientService, context);
 
 
 app.UseCors("AllowFrontend");
+app.UseStaticFiles(); // Serve files from wwwroot (uploaded documents)
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
+
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {

@@ -19,7 +19,7 @@ export function LoginPage() {
 
     try {
       const success = await login(email, password);
-      
+
       if (success) {
         navigate('/');
       } else {
@@ -89,7 +89,7 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
@@ -97,11 +97,11 @@ export function LoginPage() {
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <p className="text-xs text-gray-600 text-center">
-              Demo Mode - Use any email from the system to login
+              Demo Mode - Use any seeded email from the system to login
             </p>
             <div className="mt-3 space-y-1">
-              <p className="text-xs text-gray-500 text-center">Try: sarah.j@company.com</p>
-              <p className="text-xs text-gray-500 text-center">or: emma.d@company.com</p>
+              <p className="text-xs text-gray-500 text-center">Try: sohaib@crm.com (Password: password)</p>
+              <p className="text-xs text-gray-500 text-center">or: sana@crm.com</p>
             </div>
           </div>
         </div>

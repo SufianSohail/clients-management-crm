@@ -1,83 +1,109 @@
 using CRM.API.Services;
 using CRM.API.DTOs;
 using CRM.API.Models;
-using MongoDB.Driver; // 🔥 Required for MongoDB operations
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using MongoDB.Driver;
 using CRM.API.Database;
-using BCrypt.Net;
+
 namespace CRM.API.Seed
 {
     public static class DatabaseSeeder
     {
-        // Seed clients
-        public static async Task SeedClients(ClientService clientService)
+        private static readonly List<(string FullName, string Email, string FirstName, string Password, SalesTeamType Team)> UserDefinitions = new()
+        {
+            // Sohaib Team
+            ("Sohaib Ahmed",    "sohaib@eventcombo.com",        "Sohaib",   "Sohaib@123", SalesTeamType.Sohaib),
+            ("Simran Gurung",   "simran@eventcombo.com",        "Simran",   "Simran@123", SalesTeamType.Sohaib),
+            ("Carol Castelino", "carol.castelino@eventcombo.com","Carol",   "Carol@123", SalesTeamType.Sohaib),
+            ("Shayan Murtaza",  "shayan.murtaza@eventcombo.com","Shayan",   "Shayan@123", SalesTeamType.Sohaib),
+            // Sana Team
+            ("Sana Aslam",      "sana@eventcombo.com",                 "Sana",     "Sana@123", SalesTeamType.Sana),
+            ("Faryal Zubair",   "faryal.zubair@eventcombo.com", "Faryal",   "Faryal@123", SalesTeamType.Sana),
+            ("Arti Luhanch",    "arti@eventcombo.com",          "Arti",     "Arti@123", SalesTeamType.Sana),
+            // Sales Team
+            ("Priya Debbarma",  "priya.debbarma@eventcombo.com","Priya",    "Priya@123", SalesTeamType.Sales),
+            ("Adarshika Limbu", "adarshika@eventcombo.com",     "Adarshika","Adarshika@123", SalesTeamType.Sales),
+        };
+
+        public static async Task SeedUsers(MongoDbContext context)
+        {
+            foreach (var (fullName, email, firstName, password, team) in UserDefinitions)
+            {
+                var exists = await context.Users.Find(u => u.Email == email).AnyAsync();
+                if (!exists)
+                {
+                    await context.Users.InsertOneAsync(new User
+                    {
+                        FullName = fullName,
+                        Email = email,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+                        Team = team,
+                        Role = "Support",
+                        IsActive = true
+                    });
+                }
+            }
+        }
+
+        public static async Task SeedClients(ClientService clientService, MongoDbContext context)
         {
             var existingClients = await clientService.GetAllAsync();
             if (existingClients.Any()) return;
 
-            // Client 1
-            await clientService.CreateAsync(
-                new CreateClientRequest
-                {
-                    CompanyName = "ABC Pvt Ltd",
-                    ContactName = "John",
-                    PhoneNumber = "03000000000",
-                    Email = "abc@test.com",
-                    FeaturesGiven = new List<string> { "Premium Support" },
-                    UpsellOpportunities = new List<string> { "Analytics" },
-                    Urgency = "High",
-                    ContractStartDate = DateTime.UtcNow.AddMonths(-1),
-                    ContractEndDate = DateTime.UtcNow.AddMonths(6),
-                    AssignedSalesPersonId = "Support"
-                },
-                "SeederUser",               // Logged-in user id simulation
-                SalesTeamType.Sales         // Assigned team simulation
-            );
+            var sohaibUser = await context.Users.Find(u => u.Team == SalesTeamType.Sohaib).FirstOrDefaultAsync();
+            var sanaUser   = await context.Users.Find(u => u.Team == SalesTeamType.Sana).FirstOrDefaultAsync();
+            var salesUser  = await context.Users.Find(u => u.Team == SalesTeamType.Sales).FirstOrDefaultAsync();
 
-            // Client 2
-            await clientService.CreateAsync(
-                new CreateClientRequest
-                {
-                    CompanyName = "Systems Pvt Ltd",
-                    ContactName = "Kelly",
-                    PhoneNumber = "03000000090",
-                    Email = "kelly.systems@test.com",
-                    FeaturesGiven = new List<string> { "Email Marketing Engine" },
-                    UpsellOpportunities = new List<string> { "Manage Sessions" },
-                    Urgency = "Medium",
-                    ContractStartDate = DateTime.UtcNow.AddMonths(-2),
-                    ContractEndDate = DateTime.UtcNow.AddMonths(3),
-                    AssignedSalesPersonId = "Simran"
-                },
-                "SeederUser",
-                SalesTeamType.Sales
-            );
+            var sohaibId = sohaibUser?.Id ?? string.Empty;
+            var sanaId   = sanaUser?.Id   ?? string.Empty;
+            var salesId  = salesUser?.Id  ?? string.Empty;
+
+            await clientService.CreateAsync(new CreateClientRequest
+            {
+                CompanyName = "ABC Pvt Ltd",
+                ContactName = "John Doe",
+                PhoneNumber = "03001234567",
+                Email = "john@abc.com",
+                FeaturesGiven = new List<string> { "Premium Support", "API Access" },
+                UpsellOpportunities = new List<string> { "Analytics Dashboard" },
+                Urgency = "High",
+                ContractStartDate = DateTime.UtcNow.AddMonths(-1),
+                ContractEndDate = DateTime.UtcNow.AddMonths(6),
+                AssignedSalesPersonId = sohaibId,
+            }, sohaibId, SalesTeamType.Sohaib);
+
+            await clientService.CreateAsync(new CreateClientRequest
+            {
+                CompanyName = "Systems Pvt Ltd",
+                ContactName = "Kelly Smith",
+                PhoneNumber = "03009876543",
+                Email = "kelly@systems.com",
+                FeaturesGiven = new List<string> { "Email Marketing Engine" },
+                UpsellOpportunities = new List<string> { "Manage Sessions", "White Labeling" },
+                Urgency = "Medium",
+                ContractStartDate = DateTime.UtcNow.AddMonths(-2),
+                ContractEndDate = DateTime.UtcNow.AddMonths(3),
+                AssignedSalesPersonId = salesId,
+            }, salesId, SalesTeamType.Sales);
+
+            await clientService.CreateAsync(new CreateClientRequest
+            {
+                CompanyName = "Global Enterprise",
+                ContactName = "Sara Ahmed",
+                PhoneNumber = "03111222333",
+                Email = "sara@globalent.com",
+                FeaturesGiven = new List<string> { "CRM Integration", "Analytics", "SSO" },
+                UpsellOpportunities = new List<string> { "White Labeling", "Dedicated Support" },
+                Urgency = "Low",
+                ContractStartDate = DateTime.UtcNow.AddMonths(-3),
+                ContractEndDate = DateTime.UtcNow.AddMonths(9),
+                AssignedSalesPersonId = sanaId,
+            }, sanaId, SalesTeamType.Sana);
         }
 
-        // Seed users
-        public static async Task SeedUsers(MongoDbContext context)
-        {
-            var existingUser = await context.Users.Find(_ => true).FirstOrDefaultAsync();
-            if (existingUser != null) return;
-
-            await context.Users.InsertOneAsync(new User
-{
-    FullName = "Sohaib",
-    Email = "sohaib@crm.com",
-    PasswordHash = BCrypt.Net.BCrypt.HashPassword("password"), // HASH IT!
-    Team = SalesTeamType.Sohaib,
-    Role = "Support",
-    IsActive = true
-});
-        }
-
-        // 🔥 General method to call both seeds
         public static async Task SeedAll(ClientService clientService, MongoDbContext context)
         {
             await SeedUsers(context);
-            await SeedClients(clientService);
+            await SeedClients(clientService, context);
         }
     }
 }

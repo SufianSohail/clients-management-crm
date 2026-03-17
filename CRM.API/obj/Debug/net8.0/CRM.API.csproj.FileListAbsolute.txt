@@ -1,5 +1,6 @@
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\bin\Debug\net8.0\appsettings.Development.json
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\bin\Debug\net8.0\appsettings.json
+C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\bin\Debug\net8.0\CRM.API.staticwebassets.runtime.json
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\bin\Debug\net8.0\CRM.API.exe
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\bin\Debug\net8.0\CRM.API.deps.json
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\bin\Debug\net8.0\CRM.API.runtimeconfig.json
@@ -47,6 +48,7 @@ C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\CRM.API.Assembl
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\CRM.API.csproj.CoreCompileInputs.cache
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\CRM.API.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\CRM.API.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\CRM.API.sourcelink.json
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\HP\Desktop\ClientManagementCRM\CRM.API\obj\Debug\net8.0\staticwebassets\msbuild.CRM.API.Microsoft.AspNetCore.StaticWebAssets.props

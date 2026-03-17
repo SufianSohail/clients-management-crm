@@ -1,0 +1,57 @@
+{
+  "Files": [
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\2d5aedf0-9016-4d03-81fd-6d1a0541935f_AI_Assesment_Case_Study_Eventcombo.docx",
+      "PackagePath": "staticwebassets\\uploads\\2d5aedf0-9016-4d03-81fd-6d1a0541935f_AI_Assesment_Case_Study_Eventcombo.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\42124d1d-5baf-49ec-b5ae-67addfff0776_SESSION_API_SPECIFICATION.docx",
+      "PackagePath": "staticwebassets\\uploads\\42124d1d-5baf-49ec-b5ae-67addfff0776_SESSION_API_SPECIFICATION.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\60135543-3119-427e-8135-4a1f59e5259a_AI_Agents_Dev-Qa.docx",
+      "PackagePath": "staticwebassets\\uploads\\60135543-3119-427e-8135-4a1f59e5259a_AI_Agents_Dev-Qa.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\84959e37-57a0-4f9b-99c4-87b5e50231cb_AI New Features.docx",
+      "PackagePath": "staticwebassets\\uploads\\84959e37-57a0-4f9b-99c4-87b5e50231cb_AI New Features.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\ec481b40-ac33-4e57-addb-bdb1eaa32737_AI New Features.docx",
+      "PackagePath": "staticwebassets\\uploads\\ec481b40-ac33-4e57-addb-bdb1eaa32737_AI New Features.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\ed08c3c5-8092-4048-8e18-9105b0ec1ff9_SESSION_API_SPECIFICATION.docx",
+      "PackagePath": "staticwebassets\\uploads\\ed08c3c5-8092-4048-8e18-9105b0ec1ff9_SESSION_API_SPECIFICATION.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\edbe7a29-806b-4c17-99a0-cd5f3d2ef25b_SESSION_API_SPECIFICATION.docx",
+      "PackagePath": "staticwebassets\\uploads\\edbe7a29-806b-4c17-99a0-cd5f3d2ef25b_SESSION_API_SPECIFICATION.docx"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\f42413fc-7b46-431d-b75e-1c4fb8dfaa0f_SESSION_API_SPECIFICATION.pdf",
+      "PackagePath": "staticwebassets\\uploads\\f42413fc-7b46-431d-b75e-1c4fb8dfaa0f_SESSION_API_SPECIFICATION.pdf"
+    },
+    {
+      "Id": "C:\\Users\\HP\\Desktop\\ClientManagementCRM\\CRM.API\\wwwroot\\uploads\\fae7bdad-139b-4a91-b16b-a6f0c0343cbe_SESSION_API_SPECIFICATION.docx",
+      "PackagePath": "staticwebassets\\uploads\\fae7bdad-139b-4a91-b16b-a6f0c0343cbe_SESSION_API_SPECIFICATION.docx"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.CRM.API.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.CRM.API.props",
+      "PackagePath": "build\\CRM.API.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.CRM.API.props",
+      "PackagePath": "buildMultiTargeting\\CRM.API.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.CRM.API.props",
+      "PackagePath": "buildTransitive\\CRM.API.props"
+    }
+  ],
+  "ElementsToRemove": []
+}
